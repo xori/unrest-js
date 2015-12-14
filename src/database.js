@@ -1,12 +1,21 @@
+'use strict';
+
 var Request = require('./request');
 
 module.exports = class Database {
   constructor (name) {
     this.url = name || '/api/';
+    if (!this.url.endsWith('/')) {
+      this.url += '/';
+    }
     var self = this;
-    return table => {
+    var _database = function (table) {
       return new Table(self, table);
     };
+    // `public` functions
+    _database.x = 5;
+    _database.y = function () {};
+    return _database;
   }
 };
 

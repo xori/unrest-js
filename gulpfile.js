@@ -9,6 +9,8 @@ var uglify = require('gulp-uglify');
 var sourcemaps = require('gulp-sourcemaps');
 var gutil = require('gulp-util');
 var rename = require('gulp-rename');
+var mocha = require('gulp-mocha');
+var babel = require('gulp-babel');
 
 gulp.task('build', function () {
   // set up the browserify instance on a task basis
@@ -29,6 +31,19 @@ gulp.task('build', function () {
     .pipe(sourcemaps.write('./'))
     .pipe(gulp.dest('./dist/'))
     .pipe(gulp.dest('./linq/js/'));
+});
+
+gulp.task('node', function () {
+  return gulp.src('src/**/*.js')
+    .pipe(babel({
+      presets: ['es2015']
+    }))
+    .pipe(gulp.dest('dist/node'));
+});
+
+gulp.task('test', ['node'], function () {
+  return gulp.src('test/tests.js', {read: false})
+    .pipe(mocha({reporter: 'list'}));
 });
 
 gulp.task('default', function () {

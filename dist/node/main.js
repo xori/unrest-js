@@ -1,3 +1,5 @@
+'use strict';
+
 // The Export Module
 var globals = null;
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

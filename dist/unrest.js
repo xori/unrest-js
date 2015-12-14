@@ -1424,12 +1424,17 @@ var Table = (function () {
 'use strict';
 
 // The Export Module
-window.DSBN = window.DSBN || {};
+var globals = null;
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+  globals = module.exports;
+} else {
+  globals = window;
+}
 
 (function () {
   this.db = require('./database');
   this.request = require('superagent');
-}).call(window.DSBN);
+}).call(globals);
 
 },{"./database":4,"superagent":3}],6:[function(require,module,exports){
 'use strict';
