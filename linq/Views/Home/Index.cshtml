@@ -1,0 +1,76 @@
+﻿<div>
+  <h1>Linq-style Javascript Database Accessor</h1>
+  <ul>
+    <li><a href="#install">Installation</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#build">Building</a></li>
+  </ul>
+</div>
+
+<h2 id="install">Installation</h2>
+<pre>bower install --save rester</pre>
+
+<h2 id="usage">Usage</h2>
+<code><pre>
+var db = new DB('/api');
+// sync should begin fetching the entire database, until the database is synced
+// all requests will be stalled.
+
+// List querying
+// GET /api/TableName
+db('TableName')
+  .query({name: 'Evan%'})
+  .cacheable()
+  .then((data, cache) => {
+    // function will run twice. Once for cache with cache=true, then again when
+    //  the live data comes in, with cache=false
+  }).catch((err, cache) {
+    // err: String, server error
+    // cache: Object, the old object
+  })
+
+// Single query
+// GET /api/TableName/53
+db('TableName')
+  .get(53)
+  .cacheable()
+  .then((item, cache) => {
+    // if the cached data-structure has a field named 'id' it will use that
+    // field, otherwise it will not be triggered. This function will be triggered
+    // again with cache=false when the real date comes down the pipe.
+  }).catch((err, cache) {
+    
+  })
+
+// Save item
+// POST/PUT /api/TableName(/53)?
+data = { Id: 53, Name: 'Evan' }
+db('TableName').save(data)
+  .then(...)
+  .catch(...);
+
+// Live querying with Signlr
+db('Table')
+  .on('insert', (new, data) => {
+    // insert into template $scope.model
+  }).on('delete', (removed, data) => {
+    // remove item
+  }).on('update', (changed, data) => {
+    // splice model
+  });
+</pre></code>
+
+<h2 id="build">Building</h2>
+
+<h4>Build Minified</h4>
+<code><pre>
+npm run build;
+</pre></code>
+
+<h4>Build <small>(all-the-time)</small>; Test <small>(all-the-time)</small></h4>
+<code><pre>
+npm install; gulp;
+</pre>
+</code>
+
+<script src="~/js/unrest.min.js"></script>

@@ -1,0 +1,27 @@
+{
+  "name": "rester",
+  "authors": [
+    "Evan Verworn <evan.verworn@dsbn.org>"
+  ],
+  "description": "Client side javascript rest api that does it all.",
+  "main": "dist/rester.min.js",
+  "moduleType": [
+    "globals"
+  ],
+  "keywords": [
+    "rest",
+    "javascript",
+    "cache",
+    "Signlr"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests",
+    "linq"
+  ]
+}
