@@ -12,8 +12,6 @@ bower install -Sp unrest
 ## Usage
 ```javascript
 var db = new DB('/api');
-// sync should begin fetching the entire database, until the database is synced
-// all requests will be stalled.
 
 // List querying
 // GET /api/TableName
@@ -26,20 +24,14 @@ db('TableName')
   }).catch(err => {
     // err: String, server error
     // cache: Object, the old object
-  })
+  });
 
 // Single query
 // GET /api/TableName/53
 db('TableName')
   .fetch(53)
   .cacheable()
-  .then((item, cache) => {
-    // if the cached data-structure has a field named 'id' it will use that
-    // field, otherwise it will not be triggered. This function will be triggered
-    // again with cache=false when the real date comes down the pipe.
-  }).catch(err => {
-
-  })
+  .then(...).catch(...);
 
 // Save item
 // POST/PUT /api/TableName(/53)?
