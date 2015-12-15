@@ -1,12 +1,6 @@
 // The Export Module
-var globals = null;
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  globals = module.exports;
-} else {
-  globals = window.DSBN = {};
-}
 
-(function () {
-  this.db = require('./database');
-  this.request = require('superagent');
-}).call(globals);
+(function (exports) {
+  exports.db = require('./database');
+  exports.request = require('superagent');
+})(typeof window !== 'undefined' ? window['dsbn'] = {} : module.exports);

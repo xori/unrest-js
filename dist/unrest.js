@@ -1385,10 +1385,17 @@ module.exports = function Database(name) {
   _classCallCheck(this, Database);
 
   this.url = name || '/api/';
+  if (!this.url.endsWith('/')) {
+    this.url += '/';
+  }
   var self = this;
-  return function (table) {
+  var _database = function _database(table) {
     return new Table(self, table);
   };
+  // `public` functions
+  _database.x = 5;
+  _database.y = function () {};
+  return _database;
 };
 
 var Table = (function () {
@@ -1415,6 +1422,11 @@ var Table = (function () {
     value: function save(object) {
       return new Request(this).save(object);
     }
+  }, {
+    key: 'remove',
+    value: function remove(obj) {
+      return new Request(this).remove(obj);
+    }
   }]);
 
   return Table;
@@ -1424,17 +1436,11 @@ var Table = (function () {
 'use strict';
 
 // The Export Module
-var globals = null;
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-  globals = module.exports;
-} else {
-  globals = window;
-}
 
-(function () {
-  this.db = require('./database');
-  this.request = require('superagent');
-}).call(globals);
+(function (exports) {
+  exports.db = require('./database');
+  exports.request = require('superagent');
+})(typeof window !== 'undefined' ? window['dsbn'] = {} : module.exports);
 
 },{"./database":4,"superagent":3}],6:[function(require,module,exports){
 'use strict';
@@ -1443,6 +1449,7 @@ var _createClass = (function () { function defineProperties(target, props) { for
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+/* global localStorage */
 var xhr = require('superagent');
 
 function jsonify(agent) {
@@ -1451,16 +1458,43 @@ function jsonify(agent) {
 
 function handleResponses(request) {
   request.status = 'pending';
-  // TODO handle request.cacheable;
+  var method = request.agent.method;
+  var url = request.agent.url;
+  var CACHE_KEY = 'unrest-' + method + '-' + url;
+
+  // //
+  // Perform Cache
+  if (request.cache) {
+    var cache = JSON.parse(localStorage.getItem(CACHE_KEY));
+
+    if (cache) {
+      // if the cache exists and isn't old
+      if (cache.time && cache.time > +new Date() - request.cache) {
+        request.onSuccess.forEach(function (cb) {
+          cb(cache.data, true);
+        });
+      } else {
+        localStorage.removeItem(CACHE_KEY);
+      }
+    }
+  }
+
+  // //
+  // Handle Response
   request.agent.end(function (err, res) {
     request.status = 'resolved';
     if (err) {
+      // on error
       request.error = err;
       request.onError.forEach(function (cb) {
-        cb(res.err);
+        cb(err);
       });
     } else {
+      // on success
       request.data = res.body;
+      if (request.cache) {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ time: +new Date(), data: request.data }));
+      }
       request.onSuccess.forEach(function (cb) {
         cb(res.body);
       });
@@ -1481,7 +1515,9 @@ module.exports = (function () {
   _createClass(Request, [{
     key: 'cacheable',
     value: function cacheable() {
-      this.cacheable = true;
+      var lifetime = arguments.length <= 0 || arguments[0] === undefined ? 1000 : arguments[0];
+
+      this.cache = lifetime;
       return this;
     }
 
@@ -1504,14 +1540,21 @@ module.exports = (function () {
     }
   }, {
     key: 'save',
-    value: function save(object) {
+    value: function save(obj) {
       var r = null;
-      if (!object.id || object.id === 0) {
+      if (!obj.Id || obj.Id === 0) {
         r = xhr.post(this.table.url);
       } else {
-        r = xhr.put(this.table.url + '/' + object.id);
+        r = xhr.put(this.table.url + '/' + obj.Id);
       }
-      this.agent = r.save(object);
+      this.agent = r.send(obj);
+      jsonify(this.agent);
+      return this;
+    }
+  }, {
+    key: 'remove',
+    value: function remove(Id) {
+      this.agent = xhr.del(this.table.url + '/' + Id);
       jsonify(this.agent);
       return this;
     }
