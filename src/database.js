@@ -37,4 +37,8 @@ class Table {
     save (object) {
       return new Request(this).save(object);
     }
+
+    remove (obj) {
+      return new Request(this).remove(obj);
+    }
 }

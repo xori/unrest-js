@@ -47,6 +47,11 @@ var Table = (function () {
     value: function save(object) {
       return new Request(this).save(object);
     }
+  }, {
+    key: 'remove',
+    value: function remove(obj) {
+      return new Request(this).remove(obj);
+    }
   }]);
 
   return Table;
