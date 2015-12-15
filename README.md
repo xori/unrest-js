@@ -17,7 +17,7 @@ var db = new DB('/api');
 // GET /api/TableName
 db('TableName')
   .query({name: 'Evan%'})
-  .cacheable()
+  .cacheable(5 * 24 * 60 * 60 * 1000) // 5 days
   .then((data, cache) => {
     // function will run twice. Once for cache with cache=true, then again when
     //  the live data comes in, with cache=false
@@ -30,7 +30,7 @@ db('TableName')
 // GET /api/TableName/53
 db('TableName')
   .fetch(53)
-  .cacheable()
+  .cacheable(5 * 60 * 1000) // 5 minutes
   .then(...).catch(...);
 
 // Save item
