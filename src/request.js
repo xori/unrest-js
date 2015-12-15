@@ -1,4 +1,3 @@
-/* global localStorage */
 var xhr = require('superagent');
 
 function jsonify (agent) {
@@ -11,11 +10,12 @@ function handleResponses (request) {
   var method = request.agent.method;
   var url = request.agent.url;
   const CACHE_KEY = 'unrest-' + method + '-' + url;
+  var storageProvider = request.table._database.storage;
 
   // //
   // Perform Cache
   if (request.cache) {
-    var cache = JSON.parse(localStorage.getItem(CACHE_KEY));
+    var cache = JSON.parse(storageProvider.getItem(CACHE_KEY));
 
     if (cache) {
       // if the cache exists and isn't old
@@ -24,7 +24,7 @@ function handleResponses (request) {
           cb(cache.data, true);
         });
       } else {
-        localStorage.removeItem(CACHE_KEY);
+        storageProvider.removeItem(CACHE_KEY);
       }
     }
   }
@@ -41,7 +41,7 @@ function handleResponses (request) {
     } else { // on success
       request.data = res.body;
       if (request.cache) {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(
+        storageProvider.setItem(CACHE_KEY, JSON.stringify(
           { time: +new Date(), data: request.data }
         ));
       }
@@ -58,9 +58,15 @@ module.exports = class Request {
     this.status = 'idle';
     this.onSuccess = [];
     this.onError = [];
+    if (this.table._database.cacheByDefault) {
+      this.cache = this.table._database.cacheTTL;
+    }
   }
 
-  cacheable (lifetime = 1000) {
+  cacheable (lifetime) {
+    if (!lifetime) {
+      lifetime = this.table._database.cacheTTL;
+    }
     this.cache = lifetime;
     return this;
   }

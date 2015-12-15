@@ -11,7 +11,11 @@ bower install -Sp unrest
 
 ## Usage
 ```javascript
-var db = new DB('/api');
+var db = new DB('/api', {
+  defaultCache: 5 * 60 * 1000,
+  alwaysCache: false,
+  storage: localStorage
+});
 
 // List querying
 // GET /api/TableName

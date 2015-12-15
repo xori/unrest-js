@@ -1,17 +1,14 @@
-/*global describe, it, localStorage */
-
-// PATCH runtime
-if (typeof localStorage === 'undefined' || localStorage === null) {
-  var LocalStorage = require('node-localstorage').LocalStorage;
-  global.localStorage = new LocalStorage('./scratch');
-}
-
+/*global describe, it */
 var assert = require('assert');
+var LocalStorage = require('node-localstorage').LocalStorage;
+global.localStorage = new LocalStorage('./scratch');
+
 var DB = require('../dist/node/main').db;
 var _base = 'http://localhost:35683/api';
-var db = new DB(_base);
 
 describe('Database', function () {
+  var db = new DB(_base);
+
   describe('constructor', function () {
     it('should set the url correctly', function () {
       var table = db('myTable');
@@ -100,6 +97,11 @@ describe('Database', function () {
 });
 
 describe('Cache', function () {
+  var db = new DB(_base, {
+    cacheByDefault: true,
+    storage: global.localStorage
+  });
+
   it('should function', function (done) {
     db('values').fetch(1).cacheable(2000).catch(function (err) {
       assert.fail('couldnt even get fetch data the first time ' + err);
