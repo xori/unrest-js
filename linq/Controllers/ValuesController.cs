@@ -10,6 +10,7 @@ namespace linq.Controllers {
         private static Dictionary<int, Values> db = new Dictionary<int, Values>() {
             { 1, new Values(1) }, { 2, new Values(2) }, { 3, new Values(3) }
         };
+        Notifier<Values> notify = new Notifier<Values>("Values");
 
         // GET api/values
         public IHttpActionResult Get() {
@@ -29,6 +30,7 @@ namespace linq.Controllers {
             value.Id = new Random().Next();
             db.Add(value.Id, value);
 
+            notify.Insert(value);
             return Ok(value);
         }
 
@@ -38,13 +40,20 @@ namespace linq.Controllers {
                 return NotFound();
             }
             db[id] = value;
+            notify.Update(value);
             return Ok();
         }
 
         // DELETE api/values/5
         public IHttpActionResult Delete(int id) {
-            db.Remove(id);
-            return Ok();
+            Values value;
+            if(db.TryGetValue(id, out value)) {
+                notify.Delete(value);
+                db.Remove(id);
+                return Ok();
+            } else {
+                return NotFound();
+            }
         }
     }
 
