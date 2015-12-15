@@ -1,10 +1,11 @@
 {
-  "name": "rester",
+  "name": "unrest",
   "version": "1.0.0",
-  "description": "Client side javascript rest api that does it all.",
-  "main": "src/main.js",
+  "description": "Client side javascript rest api that just works.",
+  "main": "dist/node/main.js",
   "scripts": {
-    "test": "mocha test"
+    "test": "npm install; gulp test",
+    "build": "npm install; gulp build"
   },
   "repository": {
     "type": "git",
