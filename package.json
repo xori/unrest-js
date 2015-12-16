@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@edcgit:developers/rester.git"
+    "url": "git@edcgit:developers/unrest-js.git"
   },
   "keywords": [
     "rest",

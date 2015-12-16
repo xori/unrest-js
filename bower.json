@@ -1,10 +1,10 @@
 {
-  "name": "rester",
+  "name": "unrest",
   "authors": [
     "Evan Verworn <evan.verworn@dsbn.org>"
   ],
   "description": "Client side javascript rest api that does it all.",
-  "main": "dist/rester.min.js",
+  "main": "dist/unrest.min.js",
   "moduleType": [
     "globals"
   ],

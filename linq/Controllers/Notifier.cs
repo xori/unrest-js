@@ -30,8 +30,6 @@ namespace linq.Controllers {
             hub.Clients.All.tableChanged(table, mod.ToString(), value);
         }
 
-        
-
     }
     public enum ChangeType {
         Update, Insert, Delete
