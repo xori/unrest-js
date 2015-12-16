@@ -4,8 +4,6 @@ A client side rest api with cache that just works as you'd expect.
 
 ## Installation
 ```sh
-bower install --save --production http://edcgit/developers/javascript-unrest.git
-# eventually you'll be able to do.
 bower install -Sp unrest
 ```
 
