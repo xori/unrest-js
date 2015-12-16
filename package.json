@@ -1,6 +1,6 @@
 {
   "name": "unrest",
-  "version": "1.0.0",
+  "version": "2.0.1",
   "description": "Client side javascript rest api that just works.",
   "main": "dist/node/main.js",
   "scripts": {
