@@ -3,6 +3,6 @@
 // The Export Module
 
 (function (exports) {
-  exports.db = require('./database');
-  exports.request = require('superagent');
-})(typeof window !== 'undefined' ? window['dsbn'] = {} : module.exports);
+  exports.Unrest = require('./database');
+  exports.Unrest.superagent = require('superagent');
+})(typeof window !== 'undefined' ? window = {} : module.exports);

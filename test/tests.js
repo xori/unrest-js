@@ -3,7 +3,7 @@ var assert = require('assert');
 var LocalStorage = require('node-localstorage').LocalStorage;
 global.localStorage = new LocalStorage('./scratch');
 
-var DB = require('../dist/node/main').db;
+var DB = require('../dist/node/main').Unrest;
 var _base = 'http://localhost:35683/api';
 
 describe('Database', function () {

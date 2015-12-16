@@ -1445,9 +1445,9 @@ var Table = (function () {
 // The Export Module
 
 (function (exports) {
-  exports.db = require('./database');
-  exports.request = require('superagent');
-})(typeof window !== 'undefined' ? window['dsbn'] = {} : module.exports);
+  exports.Unrest = require('./database');
+  exports.Unrest.superagent = require('superagent');
+})(typeof window !== 'undefined' ? window = {} : module.exports);
 
 },{"./database":4,"superagent":3}],6:[function(require,module,exports){
 'use strict';
