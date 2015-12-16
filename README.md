@@ -10,8 +10,8 @@ bower install -Sp unrest
 ## Usage
 ```javascript
 var db = new Unrest('/api', {
-  defaultCache: 5 * 60 * 1000,
-  alwaysCache: false,
+  cacheTTL: 5 * 60 * 1000,
+  cacheByDefault: false,
   storage: localStorage
 });
 
