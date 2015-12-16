@@ -25,6 +25,7 @@ gulp.task('build', function () {
     .pipe(sourcemaps.init({loadMaps: true}))
         // Add transformation tasks to the pipeline here.
         .pipe(gulp.dest('./dist/'))
+        .pipe(gulp.dest('./linq/js/'))
         .pipe(rename({extname: '.min.js'}))
         .pipe(uglify())
         .on('error', gutil.log)

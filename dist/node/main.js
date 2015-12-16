@@ -1,8 +1,7 @@
 'use strict';
 
 // The Export Module
+global.Unrest = require('./database');
+global.Unrest.superagent = require('superagent');
 
-(function (exports) {
-  exports.Unrest = require('./database');
-  exports.Unrest.superagent = require('superagent');
-})(typeof window !== 'undefined' ? window = {} : module.exports);
+module.exports = global.Unrest;
