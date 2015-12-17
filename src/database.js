@@ -1,10 +1,10 @@
 /* global localStorage */
-var Request = require('./request');
+var Table = require('./table');
 
 module.exports = class Database {
   constructor (name, options) {
     this.url = name || '/api/';
-    if (!this.url.endsWith('/')) {
+    if (!this.url.match(/\/$/)) {
       this.url += '/';
     }
 
@@ -12,38 +12,17 @@ module.exports = class Database {
     this.cacheTTL = options.cacheTTL || 10 * 60 * 1000; // 10 minutes
     this.cacheByDefault = options.cacheByDefault || false;
     this.storage = options.storage || localStorage;
+    this.plugins = options.plugins || [];
 
     var self = this;
     var _database = function (table) {
       return new Table(self, table);
     };
     // `public` functions
-    _database.x = 5;
-    _database.y = function () {};
+    this.plugins.forEach(plugin => {
+      plugin.call(self);
+    });
+
     return _database;
   }
 };
-
-class Table {
-    constructor (database, table) {
-      this._database = database;
-      this.url = database.url + table;
-      this.name = table;
-    }
-
-    query (options) {
-      return new Request(this).query(options);
-    }
-
-    fetch (id) {
-      return new Request(this).fetch(id);
-    }
-
-    save (object) {
-      return new Request(this).save(object);
-    }
-
-    remove (obj) {
-      return new Request(this).remove(obj);
-    }
-}

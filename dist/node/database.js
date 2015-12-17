@@ -1,17 +1,15 @@
 'use strict';
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /* global localStorage */
-var Request = require('./request');
+var Table = require('./table');
 
 module.exports = function Database(name, options) {
   _classCallCheck(this, Database);
 
   this.url = name || '/api/';
-  if (!this.url.endsWith('/')) {
+  if (!this.url.match(/\/$/)) {
     this.url += '/';
   }
 
@@ -19,47 +17,16 @@ module.exports = function Database(name, options) {
   this.cacheTTL = options.cacheTTL || 10 * 60 * 1000; // 10 minutes
   this.cacheByDefault = options.cacheByDefault || false;
   this.storage = options.storage || localStorage;
+  this.plugins = options.plugins || [];
 
   var self = this;
   var _database = function _database(table) {
     return new Table(self, table);
   };
   // `public` functions
-  _database.x = 5;
-  _database.y = function () {};
+  this.plugins.forEach(function (plugin) {
+    plugin.call(self);
+  });
+
   return _database;
 };
-
-var Table = (function () {
-  function Table(database, table) {
-    _classCallCheck(this, Table);
-
-    this._database = database;
-    this.url = database.url + table;
-    this.name = table;
-  }
-
-  _createClass(Table, [{
-    key: 'query',
-    value: function query(options) {
-      return new Request(this).query(options);
-    }
-  }, {
-    key: 'fetch',
-    value: function fetch(id) {
-      return new Request(this).fetch(id);
-    }
-  }, {
-    key: 'save',
-    value: function save(object) {
-      return new Request(this).save(object);
-    }
-  }, {
-    key: 'remove',
-    value: function remove(obj) {
-      return new Request(this).remove(obj);
-    }
-  }]);
-
-  return Table;
-})();

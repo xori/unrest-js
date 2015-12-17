@@ -44,7 +44,7 @@ gulp.task('node', function () {
 
 gulp.task('test', ['node'], function () {
   return gulp.src('test/tests.js', {read: false})
-    .pipe(mocha({reporter: 'list'}));
+    .pipe(mocha({reporter: 'spec'}));
 });
 
 gulp.task('default', function () {
