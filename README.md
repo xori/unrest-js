@@ -5,18 +5,24 @@ A client side rest api with cache that just works as you'd expect.
 ## Installation
 ```sh
 bower install -Sp unrest
+# or
+npm install --save unrest
 ```
 
 ## Usage
 ```javascript
+// if you're in node
+var Unrest = require('unrest');
+
 var db = new Unrest('/api', {
-  cacheTTL: 10 * 60 * 1000, // 10 minutes
-  cacheByDefault: false,
-  storage: localStorage
+  cacheTTL: 10 * 60 * 1000, // 10 minutes default
+  cacheByDefault: false, // false by default
+  storage: localStorage // if in node do below
+  //       new require('node-localstorage').LocalStorage('./scratch');
 });
 
 // List querying
-// GET /api/TableName
+// GET /api/TableName?name=Evan%
 db('TableName')
   .query({name: 'Evan%'})
   .cacheable(5 * 24 * 60 * 60 * 1000) // 5 days
