@@ -1522,10 +1522,11 @@ module.exports = (function () {
     key: 'save',
     value: function save(obj) {
       var r = null;
-      if (!obj.Id || obj.Id === 0) {
+      var id = obj.Id || obj.id;
+      if (!id || id === 0) {
         r = xhr.post(this.table.url);
       } else {
-        r = xhr.put(this.table.url + '/' + obj.Id);
+        r = xhr.put(this.table.url + '/' + id);
       }
       this.agent = r.send(obj);
       jsonify(this.agent);
