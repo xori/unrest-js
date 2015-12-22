@@ -1,7 +1,7 @@
 {
   "name": "unrest",
   "version": "2.0.1",
-  "description": "Client side javascript rest api that just works.",
+  "description": "javascript REST library with more control over caching.",
   "main": "dist/node/main.js",
   "scripts": {
     "test": "npm install; gulp test",
@@ -15,7 +15,7 @@
     "rest",
     "javascript",
     "cache",
-    "Signlr"
+    "Signalr"
   ],
   "author": "Evan Verworn <evan.verworn@dsbn.org>",
   "license": "MIT",
