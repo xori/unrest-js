@@ -23,4 +23,8 @@ module.exports = class Table {
     remove (obj) {
       return new Request(this).remove(obj);
     }
+
+    cacheable (obj) {
+      return new Request(this).cacheable(obj);
+    }
 };

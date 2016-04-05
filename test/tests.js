@@ -103,10 +103,10 @@ describe('Cache', function () {
   });
 
   it('should function', function (done) {
-    db('values').fetch(1).cacheable(2000).catch(function (err) {
+    db('values').cacheable(2000).fetch(1).catch(function (err) {
       assert.fail('couldnt even get fetch data the first time ' + err);
-    }).then(function (data) {
-      db('values').fetch(1).cacheable(2000)
+    }).then(function (data, cache) {
+      db('values').cacheable(2000).fetch(1)
         .then(function (data, cache) {
           if (cache) {
             assert.deepEqual(data, data, '');
@@ -115,6 +115,39 @@ describe('Cache', function () {
         }).catch(function (err) {
           assert.fail('couldnt fetch data the 2nd time ' + err);
         });
+    });
+  });
+});
+
+describe('Pseudo Syncronous Response', function () {
+  var db = new DB(_base, {
+    cacheByDefault: true,
+    storage: global.localStorage
+  });
+
+  describe('inject the results', function () {
+    it('if an object', function (done) {
+      var result = db('values').fetch(1);
+      result.then(function (data) {
+        assert(result.Name);
+        done();
+      });
+    });
+    it('if an array', function (done) {
+      var result = db('values').query();
+      result.then(function (data) {
+        assert(!result.Name);
+        assert(result.data.length > 0);
+        done();
+      });
+    });
+    it('if a primitive', function (done) {
+      var result = db('simple').fetch(5);
+      result.then(function (data) {
+        assert(!result.Id);
+        assert(result.data === 5);
+        done();
+      });
     });
   });
 });

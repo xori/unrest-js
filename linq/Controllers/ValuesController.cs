@@ -22,6 +22,11 @@ namespace linq.Controllers {
             return Ok(db[id]);
         }
 
+        [Route("api/simple/{id}")]
+        public IHttpActionResult GetSimple(int id) {
+            return Ok(id);
+        }
+
         // POST api/values
         public IHttpActionResult Post([FromBody]Values value) {
             if(value.Id != 0) {

@@ -36,6 +36,11 @@ module.exports = (function () {
     value: function remove(obj) {
       return new Request(this).remove(obj);
     }
+  }, {
+    key: 'cacheable',
+    value: function cacheable(obj) {
+      return new Request(this).cacheable(obj);
+    }
   }]);
 
   return Table;
