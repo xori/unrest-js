@@ -9,6 +9,18 @@ bower install -Sp unrest
 npm install --save unrest
 ```
 
+## Quick Usage
+```javascript
+var db = new Unrest('/api');
+$scope.people = db('Person').query();
+```
+```html
+<ul>
+  <li ng-repeat="person in people.data">{{person.Name}}</li>
+  <li ng-show="people.error">{{people.error.reponse}}</li>
+</ul>
+```
+
 ## Usage
 
 ### Initialization
