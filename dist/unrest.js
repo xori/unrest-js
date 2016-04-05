@@ -1463,17 +1463,15 @@ function handleResponses(request) {
   // //
   // Perform Cache
   if (request._cache) {
-    console.log("cache requested");
     var cache = JSON.parse(storageProvider.getItem(CACHE_KEY));
 
     if (cache) {
-      console.log("cache exists", cache.time, request._cache, +new Date() - cache.time);
       // if the cache exists and isn't old
       if (cache.time && request._cache > +new Date() - cache.time) {
-        console.log("cache valid");
         request._onSuccess.forEach(function (cb) {
           cb(cache.data, true);
         });
+        request._cachedata = cache.data;
       } else {
         storageProvider.removeItem(CACHE_KEY);
       }
@@ -1486,7 +1484,7 @@ function handleResponses(request) {
     request._status = 'resolved';
     if (err) {
       // on error
-      request._error = err;
+      request.error = err;
       request._onError.forEach(function (cb) {
         cb(err);
       });
@@ -1496,16 +1494,20 @@ function handleResponses(request) {
       if (request._cache) {
         storageProvider.setItem(CACHE_KEY, JSON.stringify({ time: +new Date(), data: request._data }));
       }
-      request._onSuccess.forEach(function (cb) {
-        cb(res.body);
-      });
-      if (_typeof(res.body) === 'object') {
+      // //
+      // perform injection
+      if (_typeof(res.body) === 'object' && !Array.isArray(res.body)) {
         for (var prop in request._data) {
           request[prop] = request._data[prop];
         }
       } else {
         request.data = request._data;
       }
+      // //
+      // perform calbacks.
+      request._onSuccess.forEach(function (cb) {
+        cb(res.body);
+      });
     }
   });
 }
@@ -1526,7 +1528,7 @@ module.exports = (function () {
   _createClass(Request, [{
     key: 'cacheable',
     value: function cacheable(lifetime) {
-      if (this._status !== 'idle') {
+      if (this._status !== 'idle' && this._status !== 'pending') {
         console.error('cacheable could not be set before request was sent out. Ensure this is called before query, fetch, save, then, etc');
       }
       if (!lifetime) {
@@ -1580,19 +1582,22 @@ module.exports = (function () {
   }, {
     key: 'then',
     value: function then(cb) {
-      if (this._status === 'resolved' && !this._error) {
+      if (this._status === 'resolved' && !this.error) {
         cb(this._data);
       } else {
         this._onSuccess.push(cb);
       }
       if (this._status === 'idle') handleResponses(this);
+      if (this._status === 'pending' && this._cachedata) {
+        cb(this._cachedata, true);
+      }
       return this;
     }
   }, {
     key: 'catch',
     value: function _catch(cb) {
-      if (this._status === 'resolved' && this._error) {
-        cb(this._error);
+      if (this._status === 'resolved' && this.error) {
+        cb(this.error);
       } else {
         this._onError.push(cb);
       }

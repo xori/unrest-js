@@ -15,7 +15,7 @@
     "Signlr"
   ],
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://github.com/xori/unrest-js",
   "ignore": [
     "**/.*",
     "node_modules",
