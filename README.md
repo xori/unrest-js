@@ -1,6 +1,6 @@
 # Unrest <small>a vanilla javascript rest api</small>
 
-A client side rest api with cache that just works as you'd expect.
+A client side rest api with cache that works *for you* not against you.
 
 ## Installation
 ```sh
@@ -24,8 +24,8 @@ var db = new Unrest('/api', {
 // List querying
 // GET /api/TableName?name=Evan%
 db('TableName')
-  .query({name: 'Evan%'})
   .cacheable(5 * 24 * 60 * 60 * 1000) // 5 days
+  .query({name: 'Evan%'})
   .then((data, cache) => {
     // function will run twice. Once for cache with cache=true, then again when
     //  the live data comes in, with cache=false
@@ -37,8 +37,8 @@ db('TableName')
 // Single query
 // GET /api/TableName/53
 db('TableName')
-  .fetch(53)
   .cacheable(5 * 60 * 1000) // 5 minutes
+  .fetch(53)
   .then(...).catch(...);
 
 // Save item
