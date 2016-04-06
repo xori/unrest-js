@@ -7,15 +7,11 @@
     "test": "gulp test",
     "build": "gulp build"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/xori/unrest-js.git"
-  },
+  "repository": "xori/unrest-js",
   "keywords": [
     "rest",
     "javascript",
-    "cache",
-    "Signalr"
+    "cache"
   ],
   "author": "Evan Verworn <evan.verworn@dsbn.org>",
   "license": "MIT",
@@ -35,6 +31,7 @@
     "gulp-uglify": "^1.5.1",
     "gulp-util": "^3.0.7",
     "json-server": "^0.8.9",
+    "odata-filter-parser": "^0.2.8",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^1.1.0"
   }

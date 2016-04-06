@@ -165,6 +165,301 @@ Emitter.prototype.hasListeners = function(event){
 };
 
 },{}],2:[function(require,module,exports){
+/**
+ Copyright 2015 Jason Drake
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
+
+var Operators = {
+    EQUALS: 'eq',
+    AND: 'and',
+    OR: 'or',
+    GREATER_THAN: 'gt',
+    GREATER_THAN_EQUAL: 'ge',
+    LESS_THAN: 'lt',
+    LESS_THAN_EQUAL: 'le',
+    LIKE: 'like',
+    IS_NULL: 'is null',
+    NOT_EQUAL: 'ne',
+
+    /**
+     * Whether a defined operation is unary or binary.  Will return true
+     * if the operation only supports a subject with no value.
+     *
+     * @param {String} op the operation to check.
+     * @return {Boolean} whether the operation is an unary operation.
+     */
+    isUnary: function (op) {
+        var value = false;
+        if (op === Operators.IS_NULL) {
+            value = true;
+        }
+        return value;
+    },
+    /**
+     * Whether a defined operation is a logical operators or not.
+     *
+     * @param {String} op the operation to check.
+     * @return {Boolean} whether the operation is a logical operation.
+     */
+    isLogical: function (op) {
+        return (op === Operators.AND || op === Operators.OR);
+    }
+};
+
+/**
+ * Predicate is the basic model construct of the odata expression
+ *
+ * @param config
+ * @returns {Predicate}
+ * @constructor
+ */
+var Predicate = function (config) {
+    if (!config) {
+        config = {};
+    }
+    this.subject = config.subject;
+    this.value = config.value;
+    this.operator = (config.operator) ? config.operator : Operators.EQUALS;
+    return this;
+};
+
+Predicate.concat = function (operator, p) {
+    if (arguments.length < 3 && !(p instanceof Array && p.length >= 2)) {
+        throw {
+            key: 'INSUFFICIENT_PREDICATES',
+            msg: 'At least two predicates are required'
+        };
+    } else if (!operator || !Operators.isLogical(operator)) {
+        throw {
+            key: 'INVALID_LOGICAL',
+            msg: 'The operator is not representative of a logical operator.'
+        };
+    }
+    var result;
+    var arr = [];
+    if( p instanceof Array ) {
+        arr = p;
+    } else {
+        for( var i = 1; i < arguments.length; i++ ) {
+            arr.push( arguments[i] );
+        }
+    }
+    var len = arr.length;
+    result = new Predicate({
+        subject: arr[0],
+        operator: operator
+    });
+    if (len === 2) {
+        result.value = arr[len - 1];
+    } else {
+        var a = [];
+        for( var j = 1; j < len; j++ ) {
+            a.push(arr[j]);
+        }
+        result.value = Predicate.concat(operator, a);
+    }
+    return result;
+};
+
+Predicate.prototype.flatten = function(result) {
+    if( !result ) {
+        result = [];
+    }
+    if( Operators.isLogical(this.operator) ) {
+        result = result.concat(this.subject.flatten());
+        result = result.concat(this.value.flatten());
+    } else {
+        result.push(this);
+    }
+    return result;
+};
+
+/**
+ * Will serialie the predicate to an ODATA compliant serialized string.
+ *
+ * @return {String} The compliant ODATA query string
+ */
+Predicate.prototype.serialize = function() {
+    var retValue = '';
+    if (this.operator) {
+        if (this.subject === undefined || this.subject === null) {
+            throw {
+                key: 'INVALID_SUBJECT',
+                msg: 'The subject is required and is not specified.'
+            };
+        }
+        if (Operators.isLogical(this.operator) && (!(this.subject instanceof Predicate ||
+            this.value instanceof Predicate) || (this.subject instanceof Predicate && this.value === undefined))) {
+            throw {
+                key: 'INVALID_LOGICAL',
+                msg: 'The predicate does not represent a valid logical expression.'
+            };
+        }
+        retValue = '(' + ((this.subject instanceof Predicate) ? this.subject.serialize() : this.subject) + ' ' + this.operator;
+        if (!Operators.isUnary(this.operator)) {
+            if (this.value === undefined || this.value === null) {
+                throw {
+                    key: 'INVALID_VALUE',
+                    msg: 'The value was required but was not defined.'
+                };
+            }
+            retValue += ' ';
+            var val = typeof this.value;
+            if (val === 'string') {
+                retValue += '\'' + this.value + '\'';
+            } else if (val === 'number' || val === 'boolean') {
+                retValue += this.value;
+            } else if (this.value instanceof Predicate) {
+                retValue += this.value.serialize();
+            } else if (this.value instanceof Date) {
+                retValue += 'datetimeoffset\'' + this.value.toISOString() + '\'';
+            } else {
+                throw {
+                    key: 'UNKNOWN_TYPE',
+                    msg: 'Unsupported value type: ' + (typeof this.value),
+                    source: this.value
+                };
+            }
+
+        }
+        retValue += ')';
+    }
+    return retValue;
+};
+
+var ODataParser = function() {
+
+    "use strict";
+
+    var REGEX = {
+        parenthesis: /^([(](.*)[)])$/,
+        andor: /^(.*?) (or|and)+ (.*)$/,
+        op: /(\w*) (eq|gt|lt|ge|le|ne) (datetimeoffset'(.*)'|'(.*)'|[0-9]*)/,
+        startsWith: /^startswith[(](.*),'(.*)'[)]/,
+        endsWith: /^endswith[(](.*),'(.*)'[)]/,
+        contains: /^contains[(](.*),'(.*)'[)]/
+    };
+
+    function buildLike(match, key) {
+        var right = (key === 'startsWith') ? match[2] + '*' : (key === 'endsWith') ? '*' + match[2] : '*' + match[2] + '*';
+        if( match[0].charAt(match[0].lastIndexOf(')') - 1) === "\'") {
+            right = "\'" + right + "\'";
+        }
+        return {
+            subject: match[1],
+            operator: Operators.LIKE,
+            value: right
+        };
+    }
+
+    function parseFragment(filter) {
+        var found = false;
+        var obj = null;
+        for (var key in REGEX ) {
+            var regex = REGEX[key];
+            if( found ) {
+                break;
+            }
+            var match = filter.match(regex);
+            if( match ) {
+                switch (regex) {
+                    case REGEX.parenthesis:
+                        if( match.length > 2 ) {
+                            if( match[2].indexOf(')') < match[2].indexOf('(')) {
+                                continue;
+                            }
+                            obj = parseFragment(match[2]);
+                        }
+                        break;
+                    case REGEX.andor:
+                        obj = new Predicate({
+                            subject: parseFragment(match[1]),
+                            operator: match[2],
+                            value: parseFragment(match[3])
+                        });
+                        break;
+                    case REGEX.op:
+                        obj = new Predicate({
+                            subject: match[1],
+                            operator: match[2],
+                            value: ( match[3].indexOf('\'') === -1) ? +match[3] : match[3]
+                        });
+                        if(obj.value.indexOf && obj.value.indexOf("datetimeoffset") === 0) {
+                            var m = obj.value.match(/^datetimeoffset'(.*)'$/);
+                            if( m && m.length > 1) {
+                                obj.value = new Date(m[1]);
+                            }
+                        }
+                        break;
+                    case REGEX.startsWith:
+                    case REGEX.endsWith:
+                    case REGEX.contains:
+                        obj = buildLike(match, key);
+                        break;
+                }
+                found = true;
+            }
+        }
+        return obj;
+    }
+
+    return {
+        parse: function(filterStr) {
+            if( !filterStr || filterStr === '') {
+                return null;
+            }
+            var filter = filterStr.trim();
+            var obj = {};
+            if( filter.length > 0 ) {
+                obj = parseFragment(filter);
+            }
+            return obj;
+        }
+    };
+}();
+
+
+
+module.exports = {
+    Parser: ODataParser,
+    Operators: Operators,
+    Predicate: Predicate
+};
+},{}],3:[function(require,module,exports){
+/**
+ Copyright 2015 Jason Drake
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+ http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
+
+module.exports = {
+    Predicate: require('./dist/odata-parser').Predicate,
+    Operators: require('./dist/odata-parser').Operators,
+    Parser: require('./dist/odata-parser').Parser
+}
+},{"./dist/odata-parser":2}],4:[function(require,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -189,7 +484,7 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -1392,7 +1687,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":1,"reduce":2}],4:[function(require,module,exports){
+},{"emitter":1,"reduce":4}],6:[function(require,module,exports){
 'use strict';
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1408,11 +1703,13 @@ module.exports = function Database(name, options) {
     this.url += '/';
   }
 
-  options = options | {};
+  options = options || {};
+  this.odata = options.odata || false;
   this.cacheTTL = options.cacheTTL || 10 * 60 * 1000; // 10 minutes
   this.cacheByDefault = options.cacheByDefault || false;
   this.storage = options.storage || localStorage;
   this.plugins = options.plugins || [];
+  this.onEnd = options.onEnd || false;
 
   var self = this;
   var _database = function _database(table) {
@@ -1426,7 +1723,7 @@ module.exports = function Database(name, options) {
   return _database;
 };
 
-},{"./table":7}],5:[function(require,module,exports){
+},{"./table":11}],7:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1438,7 +1735,126 @@ module.exports = global.Unrest;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./database":4,"superagent":3}],6:[function(require,module,exports){
+},{"./database":6,"superagent":5}],8:[function(require,module,exports){
+"use strict";
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var parser = require('odata-filter-parser');
+
+module.exports = (function () {
+  function Odata(query) {
+    _classCallCheck(this, Odata);
+
+    this._query = query;
+  }
+
+  _createClass(Odata, [{
+    key: "toString",
+    value: function toString() {
+      var g = [],
+          q = this._query;
+      console.log(q);
+      if (q.order.length > 0) {
+        var b = "$orderby=";
+        q.order.forEach(function (i) {
+          b += i[0] + (i[1] == "desc" ? " desc" : "") + ",";
+        });
+        b = b.substring(0, b.length - 1);
+        g.push(b);
+      }
+      if (q.skip) g.push("$skip=" + parseInt(q.skip));
+      if (q.take) g.push("$top=" + parseInt(q.take));
+      if (q.where.length > 0) {
+        var b = "$filter=";
+        q.where.forEach(function (i) {
+          b += new parser.Predicate(i).serialize() + " and ";
+        });
+        b = b.substring(0, b.length - 5);
+        g.push(b);
+      }
+      if (q.select.length > 0) g.push("$select=" + q.select.join(","));
+      return g.join("&");
+    }
+  }]);
+
+  return Odata;
+})();
+
+},{"odata-filter-parser":3}],9:[function(require,module,exports){
+'use strict';
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = (function () {
+  function Query() {
+    _classCallCheck(this, Query);
+
+    this._query = {
+      order: [],
+      select: [],
+      where: [],
+      skip: null,
+      take: null
+    };
+  }
+
+  _createClass(Query, [{
+    key: 'orderBy',
+    value: function orderBy() {
+      var _this = this;
+
+      for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      args.forEach(function (arg) {
+        _this._query.order.push([arg[0] == '-' ? arg.substring(1, arg.length) : arg, arg[0] == '-' ? 'desc' : 'asc']);
+      });
+      return this;
+    }
+  }, {
+    key: 'select',
+    value: function select() {
+      var _this2 = this;
+
+      for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        args[_key2] = arguments[_key2];
+      }
+
+      args.forEach(function (arg) {
+        _this2._query.select.push(arg);
+      });
+      return this;
+    }
+  }, {
+    key: 'where',
+    value: function where(pred) {
+      this._query.where.push(pred);
+      return this;
+    }
+  }, {
+    key: 'skip',
+    value: function skip(amount) {
+      this._query.skip = amount;
+      return this;
+    }
+  }, {
+    key: 'take',
+    value: function take(amount) {
+      this._query.take = amount;
+      return this;
+    }
+  }]);
+
+  return Query;
+})();
+
+},{}],10:[function(require,module,exports){
 'use strict';
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -1448,6 +1864,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
 
 var xhr = require('superagent');
+var odata = require('./odata');
 
 function jsonify(agent) {
   return agent.type('application/json').accept('json');
@@ -1485,6 +1902,7 @@ function handleResponses(request) {
     if (err) {
       // on error
       request.error = err;
+      // debugger;
       request._onError.forEach(function (cb) {
         cb(err);
       });
@@ -1492,7 +1910,10 @@ function handleResponses(request) {
       // on success
       request._data = res.body;
       if (request._cache) {
-        storageProvider.setItem(CACHE_KEY, JSON.stringify({ time: +new Date(), data: request._data }));
+        storageProvider.setItem(CACHE_KEY, JSON.stringify({
+          time: +new Date(),
+          data: request._data
+        }));
       }
       // //
       // perform injection
@@ -1509,6 +1930,7 @@ function handleResponses(request) {
         cb(res.body);
       });
     }
+    if (request._table._database.onEnd) request._table._database.onEnd();
   });
 }
 
@@ -1537,14 +1959,24 @@ module.exports = (function () {
       this._cache = lifetime;
       return this;
     }
-
+  }, {
+    key: 'odata',
+    value: function odata() {
+      return this._table._database.odata;
+    }
+  }, {
+    key: 'resource',
+    value: function resource(id) {
+      id = id.toString();
+      return this._table.url + (this.odata() ? '(' + id + ')' : '/' + id);
+    }
     // QUERY GET /table/
     // Returns a list.
 
   }, {
     key: 'query',
     value: function query(options) {
-      this._agent = xhr.get(this._table.url).query(options);
+      this._agent = xhr.get(this._table.url + (this.odata() ? "?" + new odata(this._table._query).toString() : "")).query(options);
       jsonify(this._agent);
       if (this._status === 'idle') handleResponses(this);
       return this;
@@ -1552,7 +1984,7 @@ module.exports = (function () {
   }, {
     key: 'fetch',
     value: function fetch(id, options) {
-      this._agent = xhr.get(this._table.url + '/' + id.toString()).query(options);
+      this._agent = xhr.get(this.resource(id)).query(options);
       jsonify(this._agent);
       if (this._status === 'idle') handleResponses(this);
       return this;
@@ -1565,7 +1997,7 @@ module.exports = (function () {
       if (!id || id === 0) {
         r = xhr.post(this._table.url);
       } else {
-        r = xhr.put(this._table.url + '/' + id);
+        r = xhr.put(this.resource(id));
       }
       this._agent = r.send(obj);
       jsonify(this._agent);
@@ -1575,7 +2007,7 @@ module.exports = (function () {
   }, {
     key: 'remove',
     value: function remove(Id) {
-      this._agent = xhr.del(this._table.url + '/' + Id);
+      this._agent = xhr.del(this.resource(Id));
       jsonify(this._agent);
       return this;
     }
@@ -1614,23 +2046,33 @@ module.exports = (function () {
   return Request;
 })();
 
-},{"superagent":3}],7:[function(require,module,exports){
+},{"./odata":8,"superagent":5}],11:[function(require,module,exports){
 'use strict';
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Request = require('./request');
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-module.exports = (function () {
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Request = require('./request');
+var Query = require('./query');
+
+module.exports = (function (_Query) {
+  _inherits(Table, _Query);
+
   function Table(database, table) {
     _classCallCheck(this, Table);
 
-    this._database = database;
-    this.url = database.url + table;
-    this.name = table;
-    this.events = {};
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(Table).call(this));
+
+    _this._database = database;
+    _this.url = database.url + table;
+    _this.name = table;
+    _this.events = {};
+    return _this;
   }
 
   _createClass(Table, [{
@@ -1661,7 +2103,7 @@ module.exports = (function () {
   }]);
 
   return Table;
-})();
+})(Query);
 
-},{"./request":6}]},{},[5])
+},{"./query":9,"./request":10}]},{},[7])
 

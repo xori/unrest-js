@@ -7,6 +7,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
 
 var xhr = require('superagent');
+var odata = require('./odata');
 
 function jsonify(agent) {
   return agent.type('application/json').accept('json');
@@ -18,7 +19,7 @@ function handleResponses(request) {
   var url = request._agent.url;
   var CACHE_KEY = 'unrest-' + method + '-' + url;
   var storageProvider = request._table._database.storage;
-
+  console.log(method, url);
   // //
   // Perform Cache
   if (request._cache) {
@@ -44,6 +45,7 @@ function handleResponses(request) {
     if (err) {
       // on error
       request.error = err;
+      // debugger;
       request._onError.forEach(function (cb) {
         cb(err);
       });
@@ -51,7 +53,10 @@ function handleResponses(request) {
       // on success
       request._data = res.body;
       if (request._cache) {
-        storageProvider.setItem(CACHE_KEY, JSON.stringify({ time: +new Date(), data: request._data }));
+        storageProvider.setItem(CACHE_KEY, JSON.stringify({
+          time: +new Date(),
+          data: request._data
+        }));
       }
       // //
       // perform injection
@@ -68,6 +73,7 @@ function handleResponses(request) {
         cb(res.body);
       });
     }
+    if (request._table._database.onEnd) request._table._database.onEnd();
   });
 }
 
@@ -96,14 +102,24 @@ module.exports = (function () {
       this._cache = lifetime;
       return this;
     }
-
+  }, {
+    key: 'odata',
+    value: function odata() {
+      return this._table._database.odata;
+    }
+  }, {
+    key: 'resource',
+    value: function resource(id) {
+      id = id.toString();
+      return this._table.url + (this.odata() ? '(' + id + ')' : '/' + id);
+    }
     // QUERY GET /table/
     // Returns a list.
 
   }, {
     key: 'query',
     value: function query(options) {
-      this._agent = xhr.get(this._table.url).query(options);
+      this._agent = xhr.get(this._table.url + (this.odata() ? "?" + new odata(this._table._query).toString() : "")).query(options);
       jsonify(this._agent);
       if (this._status === 'idle') handleResponses(this);
       return this;
@@ -111,7 +127,7 @@ module.exports = (function () {
   }, {
     key: 'fetch',
     value: function fetch(id, options) {
-      this._agent = xhr.get(this._table.url + '/' + id.toString()).query(options);
+      this._agent = xhr.get(this.resource(id)).query(options);
       jsonify(this._agent);
       if (this._status === 'idle') handleResponses(this);
       return this;
@@ -124,7 +140,7 @@ module.exports = (function () {
       if (!id || id === 0) {
         r = xhr.post(this._table.url);
       } else {
-        r = xhr.put(this._table.url + '/' + id);
+        r = xhr.put(this.resource(id));
       }
       this._agent = r.send(obj);
       jsonify(this._agent);
@@ -134,7 +150,7 @@ module.exports = (function () {
   }, {
     key: 'remove',
     value: function remove(Id) {
-      this._agent = xhr.del(this._table.url + '/' + Id);
+      this._agent = xhr.del(this.resource(Id));
       jsonify(this._agent);
       return this;
     }
