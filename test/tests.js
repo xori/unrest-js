@@ -1,14 +1,14 @@
-/*global describe, it */
+/*global describe, it, before, after */
 var assert = require('assert');
 var LocalStorage = require('node-localstorage').LocalStorage;
 var jsonServer = require('json-server');
 global.localStorage = new LocalStorage('./scratch');
 
-var DB = require('../dist/node/main'),
-    fail = function (err) { assert.fail(err); },
-    _base = 'http://localhost:3210',
-    server = jsonServer.create(),
-    db;
+var DB = require('../dist/node/main');
+var fail = function (err) { assert.fail(err); };
+var _base = 'http://localhost:3210';
+var server = jsonServer.create();
+var db;
 
 server.use(jsonServer.router({
   posts: [
@@ -16,12 +16,12 @@ server.use(jsonServer.router({
   ],
   simple: [ 5 ]
 }));
-var end = server.listen(3210)
+var end = server.listen(3210);
 
 describe('Basic Usage', function () {
-  before(function() {
+  before(function () {
     db = new DB(_base);
-  })
+  });
 
   describe('Underlying Request Library', function () {
     it('should set the url correctly', function () {
@@ -57,9 +57,9 @@ describe('Basic Usage', function () {
       .then(function (data) {
         assert(!!data.id, 'was not given an id');
         db('posts').fetch(data.id)
-        .then(function() {
+        .then(function () {
           done();
-        }).catch(fail)
+        }).catch(fail);
       }).catch(fail);
   });
 
@@ -68,7 +68,7 @@ describe('Basic Usage', function () {
     db('posts').save(mydata)
       .then(function (data) {
         assert.equal(data.title, 'Joe', 'PUT didn\'t save');
-        done()
+        done();
       }).catch(function (err) {
         assert.fail(err, err.Message);
       });
@@ -106,7 +106,7 @@ describe('Cache', function () {
       cacheByDefault: true,
       storage: global.localStorage
     });
-  })
+  });
 
   it('should cache', function (done) {
     db('posts').cacheable(2000).fetch(1).catch(function (err) {
@@ -126,13 +126,13 @@ describe('Cache', function () {
 });
 
 describe('Pseudo Synchronous Response', function () {
-  after(function() {
+  after(function () {
     end.close();
   });
 
   before(function () {
     db = new DB(_base);
-  })
+  });
 
   describe('inject the results', function () {
     it('if an object', function (done) {

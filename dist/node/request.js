@@ -43,7 +43,7 @@ function handleResponses(request) {
     request._status = 'resolved';
     if (err) {
       // on error
-      request._error = err;
+      request.error = err;
       request._onError.forEach(function (cb) {
         cb(err);
       });
@@ -141,7 +141,7 @@ module.exports = (function () {
   }, {
     key: 'then',
     value: function then(cb) {
-      if (this._status === 'resolved' && !this._error) {
+      if (this._status === 'resolved' && !this.error) {
         cb(this._data);
       } else {
         this._onSuccess.push(cb);
@@ -155,8 +155,8 @@ module.exports = (function () {
   }, {
     key: 'catch',
     value: function _catch(cb) {
-      if (this._status === 'resolved' && this._error) {
-        cb(this._error);
+      if (this._status === 'resolved' && this.error) {
+        cb(this.error);
       } else {
         this._onError.push(cb);
       }
