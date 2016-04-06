@@ -8,11 +8,13 @@ module.exports = class Database {
       this.url += '/';
     }
 
-    options = options | {};
+    options = options || {};
+    this.odata = options.odata || false;
     this.cacheTTL = options.cacheTTL || 10 * 60 * 1000; // 10 minutes
     this.cacheByDefault = options.cacheByDefault || false;
     this.storage = options.storage || localStorage;
     this.plugins = options.plugins || [];
+    this.onEnd = options.onEnd || false;
 
     var self = this;
     var _database = function (table) {

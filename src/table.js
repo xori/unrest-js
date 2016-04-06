@@ -1,7 +1,9 @@
 var Request = require('./request');
+var Query = require('./query');
 
-module.exports = class Table {
+module.exports = class Table extends Query {
     constructor (database, table) {
+      super();
       this._database = database;
       this.url = database.url + table;
       this.name = table;

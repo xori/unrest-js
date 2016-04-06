@@ -1,11 +1,12 @@
 var xhr = require('superagent');
+var odata = require('./odata');
 
-function jsonify (agent) {
+function jsonify(agent) {
   return agent.type('application/json')
     .accept('json');
 }
 
-function handleResponses (request) {
+function handleResponses(request) {
   request._status = 'pending';
   var method = request._agent.method;
   var url = request._agent.url;
@@ -20,7 +21,7 @@ function handleResponses (request) {
     if (cache) {
       // if the cache exists and isn't old
       if (cache.time && request._cache > +(new Date()) - cache.time) {
-        request._onSuccess.forEach(function (cb) {
+        request._onSuccess.forEach(function(cb) {
           cb(cache.data, true);
         });
         request._cachedata = cache.data;
@@ -32,23 +33,25 @@ function handleResponses (request) {
 
   // //
   // Handle Response
-  request._agent.end(function (err, res) {
+  request._agent.end(function(err, res) {
     request._status = 'resolved';
     if (err) { // on error
       request.error = err;
-      request._onError.forEach(function (cb) {
+      // debugger;
+      request._onError.forEach(function(cb) {
         cb(err);
       });
     } else { // on success
       request._data = res.body;
       if (request._cache) {
-        storageProvider.setItem(CACHE_KEY, JSON.stringify(
-          { time: +new Date(), data: request._data }
-        ));
+        storageProvider.setItem(CACHE_KEY, JSON.stringify({
+          time: +new Date(),
+          data: request._data
+        }));
       }
       // //
       // perform injection
-      if (typeof (res.body) === 'object' && !Array.isArray(res.body)) {
+      if (typeof(res.body) === 'object' && !Array.isArray(res.body)) {
         for (var prop in request._data) {
           request[prop] = request._data[prop];
         }
@@ -57,15 +60,17 @@ function handleResponses (request) {
       }
       // //
       // perform calbacks.
-      request._onSuccess.forEach(function (cb) {
+      request._onSuccess.forEach(function(cb) {
         cb(res.body);
       });
     }
+    if( request._table._database.onEnd ) request._table._database.onEnd();
+
   });
 }
 
 module.exports = class Request {
-  constructor (table) {
+  constructor(table) {
     this._table = table;
     this._status = 'idle';
     this._onSuccess = [];
@@ -75,7 +80,7 @@ module.exports = class Request {
     }
   }
 
-  cacheable (lifetime) {
+  cacheable(lifetime) {
     if (this._status !== 'idle' && this._status !== 'pending') {
       console.error('cacheable could not be set before request was sent out. Ensure this is called before query, fetch, save, then, etc');
     }
@@ -86,27 +91,32 @@ module.exports = class Request {
     return this;
   }
 
+  odata() {
+    return this._table._database.odata;
+  }
   // QUERY GET /table/
   // Returns a list.
-  query (options) {
+  query(options) {
     this._agent = xhr
-      .get(this._table.url)
+      .get(this._table.url
+        + ( this.odata() ? "?" + (new odata(this._table._query)).toString() : ""))
       .query(options);
     jsonify(this._agent);
     if (this._status === 'idle') handleResponses(this);
     return this;
   }
 
-  fetch (id, options) {
+  fetch(id, options) {
+    id = id.toString();
     this._agent = xhr
-      .get(this._table.url + '/' + id.toString())
+      .get(this._table.url + (this.odata() ? '(' + id + ')' : '/' + id) )
       .query(options);
     jsonify(this._agent);
     if (this._status === 'idle') handleResponses(this);
     return this;
   }
 
-  save (obj) {
+  save(obj) {
     var r = null;
     var id = obj.Id || obj.id;
     if (!id || id === 0) {
@@ -120,13 +130,13 @@ module.exports = class Request {
     return this;
   }
 
-  remove (Id) {
+  remove(Id) {
     this._agent = xhr.del(this._table.url + '/' + Id);
     jsonify(this._agent);
     return this;
   }
 
-  then (cb) {
+  then(cb) {
     if (this._status === 'resolved' && !this.error) {
       cb(this._data);
     } else {
@@ -149,7 +159,7 @@ module.exports = class Request {
     return this;
   }
 
-  status () {
+  status() {
     return this._status;
   }
 };
