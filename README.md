@@ -1,4 +1,5 @@
-# Unrest <font size=4 color="#aaa">a vanilla javascript rest api</font>
+# Unrest [![wercker status](https://app.wercker.com/status/f7783279cc72b2285d9b1b1df88f554b/s/master "wercker status")](https://app.wercker.com/project/bykey/f7783279cc72b2285d9b1b1df88f554b)
+<font size=4 color="#aaa">a vanilla javascript rest api</font>
 
 A client side rest api with cache that works *for you* not against you.
 
