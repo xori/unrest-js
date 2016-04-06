@@ -19,6 +19,9 @@ server.use(jsonServer.router({
 var end = server.listen(3210);
 
 describe('Basic Usage', function () {
+  this.slow(200);
+  this.timeout(400);
+
   before(function () {
     db = new DB(_base);
   });
