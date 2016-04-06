@@ -1,15 +1,29 @@
 /*global describe, it */
 var assert = require('assert');
 var LocalStorage = require('node-localstorage').LocalStorage;
+var jsonServer = require('json-server');
 global.localStorage = new LocalStorage('./scratch');
 
-var DB = require('../dist/node/main');
-var _base = 'http://localhost:35683/api';
+var DB = require('../dist/node/main'),
+    fail = function (err) { assert.fail(err); },
+    _base = 'http://localhost:3210',
+    server = jsonServer.create(),
+    db;
 
-describe('Database', function () {
-  var db = new DB(_base);
+server.use(jsonServer.router({
+  posts: [
+    {id: 1, title: 'hello world'}
+  ],
+  simple: [ 5 ]
+}));
+var end = server.listen(3210)
 
-  describe('constructor', function () {
+describe('Basic Usage', function () {
+  before(function() {
+    db = new DB(_base);
+  })
+
+  describe('Underlying Request Library', function () {
     it('should set the url correctly', function () {
       var table = db('myTable');
       assert.equal(table.url, _base + '/myTable');
@@ -17,9 +31,9 @@ describe('Database', function () {
   });
 
   it('should query (GET)', function (done) {
-    db('values').query()
+    db('posts').query()
       .then(function (data) {
-        assert(data.length > 1, 'data did not contain any entries');
+        assert(data.length > 0, 'data did not contain any entries');
         done();
       }).catch(function (err) {
         assert.fail(err, 'network error');
@@ -27,9 +41,9 @@ describe('Database', function () {
   });
 
   it('should fetch (GET)', function (done) {
-    db('values').fetch(1)
+    db('posts').fetch(1)
       .then(function (data) {
-        assert(data.Id === 1, 'was not correct object ' + JSON.stringify(data));
+        assert(data.id === 1, 'was not correct object ' + JSON.stringify(data));
         done();
       }).catch(function (err) {
         assert.fail(err, 'network error');
@@ -37,34 +51,24 @@ describe('Database', function () {
   });
 
   it('should POST new data', function (done) {
-    var mydata = { Name: 'Joe' };
-    db('values').save(mydata)
+    var mydata = { title: 'Hello to Joe' };
+
+    db('posts').save(mydata)
       .then(function (data) {
-        assert.equal(data.Name, mydata.Name);
-        assert(!!data.Id);
-        db('values').fetch(data.Id)
-          .then(function (confirm) {
-            assert.deepEqual(confirm, data);
-            done();
-          }).catch(function (err) {
-            assert.fail(err, err.Message);
-          });
-      }).catch(function (err) {
-        assert.fail(err, err.Message);
-      });
+        assert(!!data.id, 'was not given an id');
+        db('posts').fetch(data.id)
+        .then(function() {
+          done();
+        }).catch(fail)
+      }).catch(fail);
   });
 
   it('should PUT existing data', function (done) {
-    var mydata = { Id: 1, Name: 'Joe' };
-    db('values').save(mydata)
-      .then(function () {
-        db('values').fetch(1)
-        .then(function (confirm) {
-          assert.deepEqual(confirm, mydata);
-          done();
-        }).catch(function (err) {
-          assert.fail(err, err.Message);
-        });
+    var mydata = { id: 1, title: 'Joe' };
+    db('posts').save(mydata)
+      .then(function (data) {
+        assert.equal(data.title, 'Joe', 'PUT didn\'t save');
+        done()
       }).catch(function (err) {
         assert.fail(err, err.Message);
       });
@@ -74,11 +78,11 @@ describe('Database', function () {
   //   to confirm delete.
   it('should DELETE existing data', function (done) {
     var mydata = { Name: 'DeleteTest' };
-    db('values').save(mydata)
+    db('posts').save(mydata)
       .then(function (data) {
-        db('values').remove(data.Id)
+        db('posts').remove(data.id)
           .then(function () {
-            db('values').fetch(data.Id)
+            db('posts').fetch(data.id)
               .then(function () {
                 assert.fail('item was not deleted.');
               })
@@ -97,16 +101,18 @@ describe('Database', function () {
 });
 
 describe('Cache', function () {
-  var db = new DB(_base, {
-    cacheByDefault: true,
-    storage: global.localStorage
-  });
+  before(function () {
+    db = new DB(_base, {
+      cacheByDefault: true,
+      storage: global.localStorage
+    });
+  })
 
-  it('should function', function (done) {
-    db('values').cacheable(2000).fetch(1).catch(function (err) {
+  it('should cache', function (done) {
+    db('posts').cacheable(2000).fetch(1).catch(function (err) {
       assert.fail('couldnt even get fetch data the first time ' + err);
     }).then(function (data, cache) {
-      db('values').cacheable(2000).fetch(1)
+      db('posts').cacheable(2000).fetch(1)
         .then(function (data, cache) {
           if (cache) {
             assert.deepEqual(data, data, '');
@@ -119,33 +125,28 @@ describe('Cache', function () {
   });
 });
 
-describe('Pseudo Syncronous Response', function () {
-  var db = new DB(_base, {
-    cacheByDefault: true,
-    storage: global.localStorage
+describe('Pseudo Synchronous Response', function () {
+  after(function() {
+    end.close();
   });
+
+  before(function () {
+    db = new DB(_base);
+  })
 
   describe('inject the results', function () {
     it('if an object', function (done) {
-      var result = db('values').fetch(1);
+      var result = db('posts').fetch(1);
       result.then(function (data) {
-        assert(result.Name);
+        assert(result.title);
         done();
       });
     });
     it('if an array', function (done) {
-      var result = db('values').query();
+      var result = db('posts').query();
       result.then(function (data) {
-        assert(!result.Name);
+        assert(!result.title);
         assert(result.data.length > 0);
-        done();
-      });
-    });
-    it('if a primitive', function (done) {
-      var result = db('simple').fetch(5);
-      result.then(function (data) {
-        assert(!result.Id);
-        assert(result.data === 5);
         done();
       });
     });
