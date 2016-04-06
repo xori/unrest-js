@@ -2,7 +2,10 @@ box: node
 build:
   # http://devcenter.wercker.com/docs/steps/index.html
   steps:
-    - npm-test
+    - npm-install
+    - script:
+        name: testing information
+        code: gulp test
     - script:
         name: echo nodejs information
         code: |
