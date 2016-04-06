@@ -94,6 +94,11 @@ module.exports = class Request {
   odata() {
     return this._table._database.odata;
   }
+
+  resource(id) {
+    id = id.toString();
+    return (this._table.url + this.odata() ? '(' + id + ')' : '/' + id);
+  }
   // QUERY GET /table/
   // Returns a list.
   query(options) {
@@ -107,9 +112,8 @@ module.exports = class Request {
   }
 
   fetch(id, options) {
-    id = id.toString();
     this._agent = xhr
-      .get(this._table.url + (this.odata() ? '(' + id + ')' : '/' + id) )
+      .get( this.resource(id) )
       .query(options);
     jsonify(this._agent);
     if (this._status === 'idle') handleResponses(this);
@@ -122,7 +126,7 @@ module.exports = class Request {
     if (!id || id === 0) {
       r = xhr.post(this._table.url);
     } else {
-      r = xhr.put(`${this._table.url}/${id}`);
+      r = xhr.put(this.resource(id));
     }
     this._agent = r.send(obj);
     jsonify(this._agent);
@@ -131,7 +135,7 @@ module.exports = class Request {
   }
 
   remove(Id) {
-    this._agent = xhr.del(this._table.url + '/' + Id);
+    this._agent = xhr.del(this.resource(Id));
     jsonify(this._agent);
     return this;
   }
