@@ -4,8 +4,8 @@
   "description": "javascript REST library with more control over caching.",
   "main": "dist/node/main.js",
   "scripts": {
-    "test": "npm install; gulp test",
-    "build": "npm install; gulp build"
+    "test": "gulp test",
+    "build": "gulp build"
   },
   "repository": {
     "type": "git",
