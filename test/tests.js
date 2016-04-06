@@ -137,7 +137,25 @@ describe('Pseudo Synchronous Response', function () {
     db = new DB(_base);
   });
 
-  describe('inject the results', function () {
+  it('has `pending` status property', function (done) {
+    var result = db('posts').query();
+    assert(result.pending);
+    result.then(function (data) {
+      assert(!result.pending);
+      done();
+    });
+  });
+
+  it('has `error` status property', function (done) {
+    var result = db('404').query();
+    assert(result.pending);
+    result.catch(function (data) {
+      assert(!!result.error);
+      done();
+    });
+  });
+
+  describe('injects the results', function () {
     it('if an object', function (done) {
       var result = db('posts').fetch(1);
       result.then(function (data) {

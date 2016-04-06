@@ -1872,6 +1872,7 @@ function jsonify(agent) {
 
 function handleResponses(request) {
   request._status = 'pending';
+  request.pending = true;
   var method = request._agent.method;
   var url = request._agent.url;
   var CACHE_KEY = 'unrest-' + method + '-' + url;
@@ -1899,6 +1900,7 @@ function handleResponses(request) {
   // Handle Response
   request._agent.end(function (err, res) {
     request._status = 'resolved';
+    delete request.pending;
     if (err) {
       // on error
       request.error = err;
