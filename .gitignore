@@ -1,3 +1,4 @@
 node_modules/
 # node localStorage
 scratch/
+dist/*

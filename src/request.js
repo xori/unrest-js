@@ -97,7 +97,7 @@ module.exports = class Request {
 
   resource(id) {
     id = id.toString();
-    return (this._table.url + this.odata() ? '(' + id + ')' : '/' + id);
+    return this._table.url + (this.odata() ? '(' + id + ')' : '/' + id);
   }
   // QUERY GET /table/
   // Returns a list.
