@@ -139,6 +139,7 @@ module.exports = class Request {
   remove(Id) {
     this._agent = xhr.del(this.resource(Id));
     jsonify(this._agent);
+    if (this._status === 'idle') handleResponses(this);
     return this;
   }
 
