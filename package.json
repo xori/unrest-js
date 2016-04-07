@@ -1,6 +1,6 @@
 {
   "name": "unrest",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "javascript REST library with more control over caching.",
   "main": "dist/node/main.js",
   "scripts": {
