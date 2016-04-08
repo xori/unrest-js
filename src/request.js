@@ -66,8 +66,9 @@ function handleResponses (request) {
         cb(res.body);
       });
     }
-    if (request._table._database.onEnd) request._table._database.onEnd();
-
+    if (request._table._database.onEnd) {
+      request._table._database.onEnd(request);
+    }
   });
 }
 
